@@ -1,0 +1,27 @@
+{
+  "schemes": [
+    {
+      "name": "Fallout Terminal Color",
+      "background": "#20251D",
+      "foreground": "#E7EBDF",
+      "cursorColor": "#F5FFD7",
+      "selectionBackground": "#3B7D40",
+      "black": "#070A08",
+      "red": "#F23D21",
+      "green": "#28E956",
+      "yellow": "#E8B918",
+      "blue": "#1687B8",
+      "purple": "#A63C8C",
+      "cyan": "#18C48E",
+      "white": "#D9DDCF",
+      "brightBlack": "#59665A",
+      "brightRed": "#FF5A32",
+      "brightGreen": "#55FF75",
+      "brightYellow": "#FFD52B",
+      "brightBlue": "#25B4E6",
+      "brightPurple": "#DF55B9",
+      "brightCyan": "#2CF4B3",
+      "brightWhite": "#FFFFFF"
+    }
+  ]
+}
