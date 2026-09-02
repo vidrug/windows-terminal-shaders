@@ -31,6 +31,15 @@ cbuffer PixelShaderSettings : register(b0)
 #define ENABLE_NOISE             1
 #define ENABLE_GLITCHES          0
 #define ENABLE_VIGNETTE          0
+#define ENABLE_CHROMATIC_ABERRATION 1
+#define ENABLE_GLASS_REFRACTION     1
+#define ENABLE_COLOR_BLEED          1
+#define ENABLE_EDGE_DEFOCUS         1
+#define ENABLE_PHOSPHOR_MASK        1
+#define ENABLE_HALATION             1
+#define ENABLE_CONVERGENCE_DRIFT    1
+#define ENABLE_GLASS_GLARE          1
+#define ENABLE_VERTICAL_SYNC_SLIP   1
 
 #define PHOSPHOR_COLOR            float3(0.07, 1.00, 0.15)
 #define CURVATURE_AMOUNT          0.035
@@ -55,6 +64,23 @@ cbuffer PixelShaderSettings : register(b0)
 // Increase for more frequent horizontal signal tears. Recommended: 0.0-0.08.
 #define GLITCH_STRENGTH           0.012
 #define GLITCH_DISPLACEMENT       0.004
+
+// Settings - Glass optics. Values are measured in screen pixels.
+#define CHROMATIC_OFFSET_PIXELS    1.25
+#define REFRACTION_STRENGTH_PIXELS 0.80
+#define COLOR_BLEED_PIXELS         1.75
+#define COLOR_BLEED_STRENGTH       0.30
+#define EDGE_DEFOCUS_PIXELS        1.25
+#define EDGE_DEFOCUS_STRENGTH      0.28
+#define PHOSPHOR_MASK_STRENGTH     0.18
+#define HALATION_RADIUS_PIXELS     4.50
+#define HALATION_STRENGTH          0.42
+#define HALATION_ALPHA_STRENGTH    0.20
+#define CONVERGENCE_DRIFT_PIXELS   0.65
+#define GLASS_GLARE_STRENGTH       0.070
+#define VERTICAL_SYNC_INTERVAL     28.0
+#define VERTICAL_SYNC_CHANCE       0.28
+#define VERTICAL_SYNC_SLIP_PIXELS  2.50
 
 static const float PI = 3.14159265359;
 
@@ -126,6 +152,151 @@ float2 addSignalInstability(float2 uv)
     return uv;
 }
 
+float2 addGlassRefraction(float2 uv, float2 glassUv)
+{
+#if ENABLE_GLASS_REFRACTION
+    float2 pixel = 1.0 / max(Resolution, float2(1.0, 1.0));
+    float2 wave;
+    wave.x = sin(glassUv.y * PI * 13.0 + Time * 0.11);
+    wave.x += 0.5 * sin(glassUv.y * PI * 31.0 - Time * 0.07);
+    wave.y = 0.65 * sin(glassUv.x * PI * 11.0 - Time * 0.09);
+    uv += wave * pixel * REFRACTION_STRENGTH_PIXELS;
+#endif
+    return uv;
+}
+
+float2 addVerticalSyncSlip(float2 uv)
+{
+#if ENABLE_VERTICAL_SYNC_SLIP
+    float eventId = floor(Time / VERTICAL_SYNC_INTERVAL);
+    float eventPhase = frac(Time / VERTICAL_SYNC_INTERVAL);
+    float eventEnabled = step(1.0 - VERTICAL_SYNC_CHANCE,
+        hash12(float2(eventId, 47.0)));
+    float pulse = 1.0 - smoothstep(0.0, 0.006, abs(eventPhase - 0.5));
+    float direction = hash12(float2(eventId, 83.0)) * 2.0 - 1.0;
+    uv.y += eventEnabled * pulse * direction *
+        VERTICAL_SYNC_SLIP_PIXELS / max(Resolution.y, 1.0);
+#endif
+    return uv;
+}
+
+float edgeOpticsAmount(float2 glassUv)
+{
+    float2 centered = glassUv * 2.0 - 1.0;
+    return smoothstep(0.30, 1.15, length(centered));
+}
+
+float4 sampleOpticalSource(float2 uv, float2 glassUv)
+{
+    float2 pixel = 1.0 / max(Resolution, float2(1.0, 1.0));
+    float edgeAmount = edgeOpticsAmount(glassUv);
+    float4 center = shaderTexture.Sample(samplerState, uv);
+    float4 result = center;
+
+#if ENABLE_CHROMATIC_ABERRATION || ENABLE_CONVERGENCE_DRIFT
+    float2 channelOffset = float2(0.0, 0.0);
+#if ENABLE_CHROMATIC_ABERRATION
+    float2 radial = glassUv * 2.0 - 1.0;
+    float2 radialDirection = normalize(radial + float2(0.0001, -0.0001));
+    channelOffset += radialDirection * pixel *
+        CHROMATIC_OFFSET_PIXELS * edgeAmount;
+#endif
+#if ENABLE_CONVERGENCE_DRIFT
+    float2 convergenceDirection = float2(
+        sin(Time * 0.23), cos(Time * 0.19));
+    channelOffset += convergenceDirection * pixel * CONVERGENCE_DRIFT_PIXELS;
+#endif
+    float4 redSample = shaderTexture.Sample(samplerState,
+        clamp(uv + channelOffset, float2(0.0, 0.0), float2(1.0, 1.0)));
+    float4 blueSample = shaderTexture.Sample(samplerState,
+        clamp(uv - channelOffset, float2(0.0, 0.0), float2(1.0, 1.0)));
+    result.r = redSample.r;
+    result.b = blueSample.b;
+#endif
+
+#if ENABLE_COLOR_BLEED
+    float2 bleedOffset = float2(COLOR_BLEED_PIXELS * pixel.x, 0.0);
+    float4 bleedLeft = shaderTexture.Sample(samplerState,
+        clamp(uv - bleedOffset, float2(0.0, 0.0), float2(1.0, 1.0)));
+    float4 bleedRight = shaderTexture.Sample(samplerState,
+        clamp(uv + bleedOffset, float2(0.0, 0.0), float2(1.0, 1.0)));
+    float4 horizontalBleed = (bleedLeft + bleedRight) * 0.5;
+    result.rgb = lerp(result.rgb, max(result.rgb, horizontalBleed.rgb),
+        COLOR_BLEED_STRENGTH);
+    result.a = max(result.a, horizontalBleed.a * COLOR_BLEED_STRENGTH);
+#endif
+
+#if ENABLE_EDGE_DEFOCUS
+    float2 focusOffset = pixel * EDGE_DEFOCUS_PIXELS;
+    float4 softEdges = 0.0;
+    softEdges += shaderTexture.Sample(samplerState, clamp(
+        uv + float2(focusOffset.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
+    softEdges += shaderTexture.Sample(samplerState, clamp(
+        uv - float2(focusOffset.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
+    softEdges += shaderTexture.Sample(samplerState, clamp(
+        uv + float2(0.0, focusOffset.y), float2(0.0, 0.0), float2(1.0, 1.0)));
+    softEdges += shaderTexture.Sample(samplerState, clamp(
+        uv - float2(0.0, focusOffset.y), float2(0.0, 0.0), float2(1.0, 1.0)));
+    softEdges *= 0.25;
+    result = lerp(result, softEdges, EDGE_DEFOCUS_STRENGTH * edgeAmount);
+#endif
+
+    return result;
+}
+
+float4 sampleHalation(float2 uv, float4 center)
+{
+#if ENABLE_HALATION
+    float2 pixel = 1.0 / max(Resolution, float2(1.0, 1.0));
+    float2 radius = pixel * HALATION_RADIUS_PIXELS;
+    float4 halo = 0.0;
+    halo += shaderTexture.Sample(samplerState, clamp(
+        uv + float2(radius.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
+    halo += shaderTexture.Sample(samplerState, clamp(
+        uv - float2(radius.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
+    halo += shaderTexture.Sample(samplerState, clamp(
+        uv + float2(0.0, radius.y), float2(0.0, 0.0), float2(1.0, 1.0)));
+    halo += shaderTexture.Sample(samplerState, clamp(
+        uv - float2(0.0, radius.y), float2(0.0, 0.0), float2(1.0, 1.0)));
+    halo *= 0.25;
+
+    float haloMask = smoothstep(0.06, 0.75, luminance(halo.rgb));
+    float3 haloColor = max(halo.rgb - center.rgb * 0.35, 0.0) *
+        HALATION_STRENGTH * haloMask;
+    float haloAlpha = halo.a * HALATION_ALPHA_STRENGTH * haloMask;
+    return float4(haloColor, haloAlpha);
+#else
+    return float4(0.0, 0.0, 0.0, 0.0);
+#endif
+}
+
+float3 applyPhosphorMask(float3 color, float2 pixelPosition)
+{
+#if ENABLE_PHOSPHOR_MASK
+    float uiScale = max(Scale, 1.0);
+    float column = fmod(floor(pixelPosition.x / uiScale), 3.0);
+    float dim = 1.0 - PHOSPHOR_MASK_STRENGTH;
+    float3 mask = column < 1.0 ? float3(1.0, dim, dim) :
+        (column < 2.0 ? float3(dim, 1.0, dim) : float3(dim, dim, 1.0));
+    return color * mask;
+#else
+    return color;
+#endif
+}
+
+float3 applyGlassGlare(float3 color, float2 glassUv, float contentAlpha)
+{
+#if ENABLE_GLASS_GLARE
+    float2 glarePosition = glassUv - float2(0.28, 0.12);
+    float diagonal = abs(glarePosition.y + glarePosition.x * 0.22);
+    float band = 1.0 - smoothstep(0.02, 0.16, diagonal);
+    float upperFade = 1.0 - smoothstep(0.05, 0.58, glassUv.y);
+    float glare = band * upperFade * GLASS_GLARE_STRENGTH * contentAlpha;
+    color += float3(0.72, 1.0, 0.78) * glare;
+#endif
+    return color;
+}
+
 float3 sampleGlow(float2 uv, float3 center)
 {
 #if ENABLE_GLOW
@@ -185,10 +356,15 @@ float4 main(PSInput input) : SV_TARGET
     }
 
     uv = addSignalInstability(uv);
+    uv = addGlassRefraction(uv, glassUv);
+    uv = addVerticalSyncSlip(uv);
     uv = clamp(uv, float2(0.0, 0.0), float2(1.0, 1.0));
 
-    float4 source = shaderTexture.Sample(samplerState, uv);
+    float4 source = sampleOpticalSource(uv, glassUv);
     float3 glowSource = sampleGlow(uv, source.rgb);
+    float4 halation = sampleHalation(uv, source);
+    glowSource += halation.rgb;
+    source.a = max(source.a, halation.a);
     float sourceEnergy = max(luminance(source.rgb), max(source.r, source.b) * 0.62);
     float glowEnergy = luminance(glowSource);
     sourceEnergy = pow(saturate(sourceEnergy), 0.82) + glowEnergy;
@@ -226,6 +402,7 @@ float4 main(PSInput input) : SV_TARGET
 #endif
 
     color *= scanlineMask(input.pos.xy);
+    color = applyPhosphorMask(color, input.pos.xy);
     color *= rollingRefresh(glassUv);
 
     // Irregular power flicker, restrained so text remains comfortable to read.
@@ -241,6 +418,8 @@ float4 main(PSInput input) : SV_TARGET
     color += (noise - 0.5) * NOISE_STRENGTH;
 #endif
 #endif
+
+    color = applyGlassGlare(color, glassUv, source.a);
 
 #if ENABLE_VIGNETTE
     color *= screenVignette(glassUv);
