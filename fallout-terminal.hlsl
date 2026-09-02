@@ -33,6 +33,7 @@ cbuffer PixelShaderSettings : register(b0)
 #define ENABLE_VIGNETTE          0
 
 #define PHOSPHOR_COLOR            float3(0.07, 1.00, 0.15)
+#define SCREEN_BACKGROUND_COLOR   float3(32.0 / 255.0, 37.0 / 255.0, 29.0 / 255.0)
 #define CURVATURE_AMOUNT          0.035
 
 // Pull the terminal texture away from the dark CRT rim so edge text stays readable.
@@ -174,21 +175,27 @@ float4 main(PSInput input) : SV_TARGET
     // attached to the outer glass coordinates.
     uv = fitContentInsideScreen(uv);
 
-    // Black rounded CRT corners. Avoid sampling outside the terminal texture.
-    if (uv.x <= 0.0 || uv.x >= 1.0 || uv.y <= 0.0 || uv.y >= 1.0)
-    {
-#if FALLOUT_COLOR_MODE
-        return float4(0.0, BLACK_LEVEL * 0.35, 0.0, 1.0);
-#else
-        return float4(BLACK_LEVEL * 0.2, BLACK_LEVEL * 0.2, BLACK_LEVEL * 0.2, 1.0);
-#endif
-    }
+    // Keep the safe text inset, but fill the area around it with the terminal
+    // background instead of drawing a visible black CRT frame.
+    bool outsideContent = uv.x <= 0.0 || uv.x >= 1.0 ||
+        uv.y <= 0.0 || uv.y >= 1.0;
 
     uv = addSignalInstability(uv);
     uv = clamp(uv, float2(0.0, 0.0), float2(1.0, 1.0));
 
-    float4 source = shaderTexture.Sample(samplerState, uv);
-    float3 glowSource = sampleGlow(uv, source.rgb);
+    float4 source;
+    float3 glowSource;
+
+    if (outsideContent)
+    {
+        source = float4(SCREEN_BACKGROUND_COLOR, 1.0);
+        glowSource = SCREEN_BACKGROUND_COLOR * 0.68 * GLOW_STRENGTH;
+    }
+    else
+    {
+        source = shaderTexture.Sample(samplerState, uv);
+        glowSource = sampleGlow(uv, source.rgb);
+    }
     float sourceEnergy = max(luminance(source.rgb), max(source.r, source.b) * 0.62);
     float glowEnergy = luminance(glowSource);
     sourceEnergy = pow(saturate(sourceEnergy), 0.82) + glowEnergy;
