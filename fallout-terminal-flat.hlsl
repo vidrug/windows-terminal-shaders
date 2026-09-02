@@ -24,6 +24,8 @@ cbuffer PixelShaderSettings : register(b0)
 
 // 0 = preserve palette colors, 1 = apply Fallout phosphor color grading.
 #define FALLOUT_COLOR_MODE       0
+// 1 = use the built-in lower-intensity daily-use preset.
+#define FALLOUT_SUBTLE_PRESET    0
 
 #define ENABLE_CURVATURE         0
 #define ENABLE_GLOW              1
@@ -47,25 +49,47 @@ cbuffer PixelShaderSettings : register(b0)
 // Pull the terminal texture away from the dark CRT rim so edge text stays readable.
 #define CONTENT_INSET             float2(0.0, 0.0)
 
-#define GLOW_STRENGTH             0.38
-#define SCANLINE_STRENGTH         0.26
-#define NOISE_STRENGTH            0.014
-
 // Strong, wide oval vignette like an old recessed terminal screen.
 #define VIGNETTE_STRENGTH         0.82
 #define VIGNETTE_INNER_RADIUS     0.35
 #define VIGNETTE_OUTER_RADIUS     1.30
 #define VIGNETTE_HORIZONTAL_SCALE 0.75
 #define VIGNETTE_EDGE_SOFTNESS    0.025
-#define BLACK_LEVEL               0.016
-#define BRIGHTNESS                1.22
-#define COLOR_SATURATION          1.35
-
+#if FALLOUT_SUBTLE_PRESET
+#define GLOW_STRENGTH              0.20
+#define SCANLINE_STRENGTH          0.14
+#define NOISE_STRENGTH             0.006
+#define BLACK_LEVEL                0.012
+#define BRIGHTNESS                 1.12
+#define COLOR_SATURATION           1.18
+#define GLITCH_STRENGTH            0.006
+#define GLITCH_DISPLACEMENT        0.0015
+#define CHROMATIC_OFFSET_PIXELS    0.45
+#define REFRACTION_STRENGTH_PIXELS 0.30
+#define COLOR_BLEED_PIXELS         0.80
+#define COLOR_BLEED_STRENGTH       0.15
+#define EDGE_DEFOCUS_PIXELS        0.60
+#define EDGE_DEFOCUS_STRENGTH      0.12
+#define PHOSPHOR_MASK_STRENGTH     0.08
+#define HALATION_RADIUS_PIXELS     2.50
+#define HALATION_STRENGTH          0.20
+#define HALATION_ALPHA_STRENGTH    0.10
+#define CONVERGENCE_DRIFT_PIXELS   0.20
+#define GLASS_GLARE_STRENGTH       0.030
+#define VERTICAL_SYNC_INTERVAL     42.0
+#define VERTICAL_SYNC_CHANCE       0.12
+#define VERTICAL_SYNC_SLIP_PIXELS  1.00
+#else
+#define GLOW_STRENGTH              0.38
+#define SCANLINE_STRENGTH          0.26
+#define NOISE_STRENGTH             0.014
+#define BLACK_LEVEL                0.016
+#define BRIGHTNESS                 1.22
+#define COLOR_SATURATION           1.35
 // Increase for more frequent horizontal signal tears. Recommended: 0.0-0.08.
-#define GLITCH_STRENGTH           0.012
-#define GLITCH_DISPLACEMENT       0.004
-
-// Settings - Glass optics. Values are measured in screen pixels.
+#define GLITCH_STRENGTH            0.012
+#define GLITCH_DISPLACEMENT        0.004
+// Glass optics. Values are measured in screen pixels.
 #define CHROMATIC_OFFSET_PIXELS    1.25
 #define REFRACTION_STRENGTH_PIXELS 0.80
 #define COLOR_BLEED_PIXELS         1.75
@@ -81,6 +105,7 @@ cbuffer PixelShaderSettings : register(b0)
 #define VERTICAL_SYNC_INTERVAL     28.0
 #define VERTICAL_SYNC_CHANCE       0.28
 #define VERTICAL_SYNC_SLIP_PIXELS  2.50
+#endif
 
 static const float PI = 3.14159265359;
 
