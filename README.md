@@ -146,8 +146,34 @@ color mode. The implementation is original and does not use game assets.
 | ------------ | ----------- |
 | ![Fallout Terminal curved shader](.github/fallout-terminal-curved.png) | ![Fallout Terminal flat shader](.github/fallout-terminal-flat.png) |
 
-The matching 16-color Windows Terminal palette is provided in
-[`fallout-color-scheme.json`](./fallout-color-scheme.json).
+### Color palette
+
+[`fallout-color-scheme.json`](./fallout-color-scheme.json) contains the matching
+`Fallout Terminal Color` scheme. It uses a dark green-gray screen background,
+warm neutral foreground text, and bright saturated ANSI colors. The ANSI black
+color is intentionally darker than the background, so black text and blocks
+remain distinguishable instead of disappearing into the screen.
+
+| UI color | Value |
+| -------- | ----- |
+| Background | `#20251D` |
+| Foreground | `#E7EBDF` |
+| Cursor | `#F5FFD7` |
+| Selection | `#3B7D40` |
+
+| ANSI color | Normal | Bright |
+| ---------- | ------ | ------ |
+| Black | `#070A08` | `#59665A` |
+| Red | `#F23D21` | `#FF5A32` |
+| Green | `#28E956` | `#55FF75` |
+| Yellow | `#E8B918` | `#FFD52B` |
+| Blue | `#1687B8` | `#25B4E6` |
+| Purple | `#A63C8C` | `#DF55B9` |
+| Cyan | `#18C48E` | `#2CF4B3` |
+| White | `#D9DDCF` | `#FFFFFF` |
+
+Keep `FALLOUT_COLOR_MODE` set to `0` to display these colors without
+monochrome phosphor grading. The palette works with both shader variants.
 
 ![Fallout Terminal ANSI color palette](.github/fallout-terminal-palette.png)
 
