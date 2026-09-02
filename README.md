@@ -238,6 +238,48 @@ strengths are grouped below the toggles near the top of each shader; offsets and
 radii are expressed in screen pixels so they remain consistent across terminal
 sizes.
 
+### Subtle preset
+
+For a cleaner daily-use terminal, keep the effects enabled but replace their
+strength values with the following lower-intensity preset in either shader:
+
+```c++
+#define BLACK_LEVEL                0.012
+#define BRIGHTNESS                 1.12
+#define COLOR_SATURATION           1.18
+
+#define GLOW_STRENGTH              0.20
+#define SCANLINE_STRENGTH          0.14
+#define NOISE_STRENGTH             0.006
+
+#define CHROMATIC_OFFSET_PIXELS    0.45
+#define REFRACTION_STRENGTH_PIXELS 0.30
+#define COLOR_BLEED_PIXELS         0.80
+#define COLOR_BLEED_STRENGTH       0.15
+#define EDGE_DEFOCUS_PIXELS        0.60
+#define EDGE_DEFOCUS_STRENGTH      0.12
+#define PHOSPHOR_MASK_STRENGTH     0.08
+#define HALATION_RADIUS_PIXELS     2.50
+#define HALATION_STRENGTH          0.20
+#define HALATION_ALPHA_STRENGTH    0.10
+#define CONVERGENCE_DRIFT_PIXELS   0.20
+#define GLASS_GLARE_STRENGTH       0.030
+
+#define VERTICAL_SYNC_INTERVAL     42.0
+#define VERTICAL_SYNC_CHANCE       0.12
+#define VERTICAL_SYNC_SLIP_PIXELS  1.00
+```
+
+For gentler curved glass, also use these values in `fallout-terminal.hlsl`.
+Keep `CONTENT_INSET` at `float2(0.0, 0.0)` in the flat variant.
+
+```c++
+#define CURVATURE_AMOUNT           0.020
+#define CONTENT_INSET              float2(0.008, 0.030)
+```
+
+`ENABLE_GLITCHES` and `ENABLE_VIGNETTE` remain set to `0` in this preset.
+
 ## [Transparent](./transparent.hlsl)
 
 Turn a specific color into transparent for use with `useAcrylic` and `acrylicOpacity` when xterm colors are enabled, like in vim themes.
