@@ -134,6 +134,84 @@ When using a monochorme tint, there should be some considerations made. The Vint
 #define GRAIN_INTENSITY         0.02
 ```
 
+## [Fallout Terminal](./fallout-terminal.hlsl)
+
+A Fallout / Pip-Boy inspired CRT treatment with saturated ANSI colors, phosphor
+glow, scanlines, glass optics, analog drift, and an optional monochrome-green
+color mode. The implementation is original and does not use game assets.
+
+### Preview
+
+| Curved glass | Flat screen |
+| ------------ | ----------- |
+| ![Fallout Terminal curved shader](.github/fallout-terminal-curved.png) | ![Fallout Terminal flat shader](.github/fallout-terminal-flat.png) |
+
+The matching 16-color Windows Terminal palette is provided in
+[`fallout-color-scheme.json`](./fallout-color-scheme.json).
+
+![Fallout Terminal ANSI color palette](.github/fallout-terminal-palette.png)
+
+### Variants
+
+- [`fallout-terminal.hlsl`](./fallout-terminal.hlsl) uses curved glass and a
+  safe content inset so text remains visible around the distorted edges.
+- [`fallout-terminal-flat.hlsl`](./fallout-terminal-flat.hlsl) keeps the image
+  rectangular, removes the inset and vignette, and fills the terminal viewport.
+
+Both variants include the same color, phosphor, glow, and analog signal effects.
+
+### Installation
+
+Add the scheme from `fallout-color-scheme.json` to the `schemes` array in
+Windows Terminal's `settings.json`, then set the scheme and shader on a profile:
+
+```json
+{
+  "colorScheme": "Fallout Terminal Color",
+  "experimental.pixelShaderPath": "C:\\path\\to\\fallout-terminal.hlsl"
+}
+```
+
+Use `fallout-terminal-flat.hlsl` in `experimental.pixelShaderPath` for the flat
+variant. Open a new tab after changing the path so Windows Terminal loads the
+selected shader.
+
+### Color mode
+
+The palette remains fully colored by default. Enable Fallout color grading to
+convert neutral foreground colors to green phosphor while preserving saturated
+ANSI hues:
+
+```c++
+// 0 = preserve palette colors, 1 = apply Fallout phosphor grading
+#define FALLOUT_COLOR_MODE 0
+```
+
+### Effects
+
+| Effect | Setting | Description |
+| ------ | ------- | ----------- |
+| Screen curvature | `ENABLE_CURVATURE` | Bends the image around the outer glass surface. Enabled only in the curved variant. |
+| Phosphor glow | `ENABLE_GLOW` | Spreads light from bright glyphs into nearby pixels. |
+| Scanlines | `ENABLE_SCANLINES` | Adds horizontal raster lines and a subtle vertical phosphor lattice. |
+| Film noise | `ENABLE_NOISE` | Applies restrained animated analog grain without obscuring text. |
+| Signal glitches | `ENABLE_GLITCHES` | Adds rare horizontal signal tears and analog drift. Disabled by default. |
+| Vignette | `ENABLE_VIGNETTE` | Darkens the outer glass rim. Disabled by default in both supplied variants. |
+| Chromatic aberration | `ENABLE_CHROMATIC_ABERRATION` | Separates red and blue channels toward the screen edges. |
+| Glass refraction | `ENABLE_GLASS_REFRACTION` | Applies slow sub-pixel waves that simulate uneven glass. |
+| Color bleed | `ENABLE_COLOR_BLEED` | Lets bright colors spread slightly in the horizontal direction. |
+| Edge defocus | `ENABLE_EDGE_DEFOCUS` | Softens the image progressively toward the edge of the glass. |
+| Phosphor mask | `ENABLE_PHOSPHOR_MASK` | Modulates RGB phosphor columns at the physical pixel scale. |
+| Halation | `ENABLE_HALATION` | Creates a wider halo around bright text and colored highlights. |
+| Convergence drift | `ENABLE_CONVERGENCE_DRIFT` | Adds a slow sub-pixel RGB alignment drift. |
+| Glass glare | `ENABLE_GLASS_GLARE` | Draws a faint diagonal reflection across illuminated content. |
+| Vertical sync slip | `ENABLE_VERTICAL_SYNC_SLIP` | Produces a rare, brief vertical synchronization jump. |
+
+A rolling refresh band and restrained power flicker are always active. Effect
+strengths are grouped below the toggles near the top of each shader; offsets and
+radii are expressed in screen pixels so they remain consistent across terminal
+sizes.
+
 ## [Transparent](./transparent.hlsl)
 
 Turn a specific color into transparent for use with `useAcrylic` and `acrylicOpacity` when xterm colors are enabled, like in vim themes.
