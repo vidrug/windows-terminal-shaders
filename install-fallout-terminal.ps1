@@ -33,9 +33,16 @@ if (-not (Test-Path -LiteralPath $resolvedSettingsPath -PathType Leaf)) {
 
 $curvedShaderPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'fallout-terminal.hlsl'))
 $flatShaderPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'fallout-terminal-flat.hlsl'))
+$curvedLightShaderPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'fallout-terminal-light.hlsl'))
+$flatLightShaderPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'fallout-terminal-flat-light.hlsl'))
 $palettePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'fallout-color-scheme.json'))
 
-foreach ($requiredShaderPath in @($curvedShaderPath, $flatShaderPath)) {
+foreach ($requiredShaderPath in @(
+    $curvedShaderPath,
+    $flatShaderPath,
+    $curvedLightShaderPath,
+    $flatLightShaderPath
+)) {
     if (-not (Test-Path -LiteralPath $requiredShaderPath -PathType Leaf)) {
         throw "Shader was not found: $requiredShaderPath"
     }
@@ -51,17 +58,24 @@ if ($null -eq $palette) {
 }
 
 $currentShaderPath = $settings.profiles.defaults.'experimental.pixelShaderPath'
-$shaderPath = switch ($ShaderVariant) {
-    'Curved' { $curvedShaderPath }
-    'Flat' { $flatShaderPath }
+$resolvedVariant = switch ($ShaderVariant) {
+    'Curved' { 'Curved' }
+    'Flat' { 'Flat' }
     default {
-        if ($currentShaderPath -in @($curvedShaderPath, $flatShaderPath)) {
-            $currentShaderPath
+        if ($currentShaderPath -in @($flatShaderPath, $flatLightShaderPath)) {
+            'Flat'
         }
         else {
-            $curvedShaderPath
+            'Curved'
         }
     }
+}
+
+$shaderPath = if ($Theme -eq 'Light') {
+    if ($resolvedVariant -eq 'Flat') { $flatLightShaderPath } else { $curvedLightShaderPath }
+}
+else {
+    if ($resolvedVariant -eq 'Flat') { $flatShaderPath } else { $curvedShaderPath }
 }
 
 Set-ObjectProperty -Object $settings.profiles.defaults -Name 'experimental.pixelShaderPath' -Value $shaderPath

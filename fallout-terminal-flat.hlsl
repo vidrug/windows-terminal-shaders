@@ -24,6 +24,8 @@ cbuffer PixelShaderSettings : register(b0)
 
 // 0 = preserve palette colors, 1 = apply Fallout phosphor color grading.
 #define FALLOUT_COLOR_MODE       0
+// Dark palette variant. The dedicated light shader sets this to 1.
+#define FALLOUT_LIGHT_MODE       0
 // 1 = use the built-in lower-intensity daily-use preset.
 #define FALLOUT_SUBTLE_PRESET    0
 
@@ -363,9 +365,7 @@ float4 main(PSInput input) : SV_TARGET
 {
     float2 glassUv = input.uv;
     float2 uv = glassUv;
-    // Windows Terminal exposes the active profile background in the cbuffer.
-    // Switch optics automatically so light palettes retain dark, crisp text.
-    float lightTheme = step(0.55, luminance(Background.rgb));
+    float lightTheme = FALLOUT_LIGHT_MODE;
 
 #if ENABLE_CURVATURE
     uv = curveScreen(uv);

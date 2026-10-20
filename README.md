@@ -152,7 +152,7 @@ game assets.
 [`fallout-color-scheme.json`](./fallout-color-scheme.json) contains two matching
 schemes. `Fallout Terminal Color` uses a dark green-gray screen background,
 warm neutral foreground text, and bright saturated ANSI colors. `Fallout
-Terminal Light` uses a warm paper-phosphor background with dark ANSI colors;
+Terminal Light` uses a neutral pale green-gray background with dark ANSI colors;
 every foreground color has at least a 4.7:1 contrast ratio against the
 background. ANSI black remains distinct from the background in both schemes.
 
@@ -178,10 +178,10 @@ background. ANSI black remains distinct from the background in both schemes.
 
 | UI color | Value |
 | -------- | ----- |
-| Background | `#F2F0DE` |
+| Background | `#EEF2EC` |
 | Foreground | `#182318` |
 | Cursor | `#285F2B` |
-| Selection | `#B8C9A8` |
+| Selection | `#C1D0BE` |
 
 | ANSI color | Normal | Bright |
 | ---------- | ------ | ------ |
@@ -196,9 +196,10 @@ background. ANSI black remains distinct from the background in both schemes.
 
 Keep `FALLOUT_COLOR_MODE` set to `0` to display these colors without
 monochrome phosphor grading. Both palettes work with both shader variants. The
-shader reads Windows Terminal's active background color and automatically uses
-additive phosphor bloom for the dark scheme or restrained ink-style optics for
-the light scheme, keeping dark glyphs crisp.
+dedicated light variants use restrained ink-style optics instead of additive
+phosphor bloom, keeping dark glyphs crisp. A local contrast pass also rescues
+dark application text placed on dark ANSI status bars, such as tmux themes,
+without changing normal text on the light terminal background.
 
 ![Fallout Terminal ANSI color palette](.github/fallout-terminal-palette.png)
 
@@ -208,6 +209,10 @@ the light scheme, keeping dark glyphs crisp.
   safe content inset so text remains visible around the distorted edges.
 - [`fallout-terminal-flat.hlsl`](./fallout-terminal-flat.hlsl) keeps the image
   rectangular, removes the inset and vignette, and fills the terminal viewport.
+- [`fallout-terminal-light.hlsl`](./fallout-terminal-light.hlsl) is the curved
+  light-palette variant with restrained effects and contextual contrast.
+- [`fallout-terminal-flat-light.hlsl`](./fallout-terminal-flat-light.hlsl) is
+  the rectangular light-palette variant.
 
 Both variants include the same color, phosphor, glow, and analog signal effects.
 
@@ -223,18 +228,19 @@ Windows Terminal's `settings.json`, then set the scheme and shader on a profile:
 }
 ```
 
-For the light version, use the same shader and change only the scheme:
+For the light version, select the matching light shader and scheme:
 
 ```json
 {
   "colorScheme": "Fallout Terminal Light",
-  "experimental.pixelShaderPath": "C:\\path\\to\\fallout-terminal.hlsl"
+  "experimental.pixelShaderPath": "C:\\path\\to\\fallout-terminal-light.hlsl"
 }
 ```
 
 Use `fallout-terminal-flat.hlsl` in `experimental.pixelShaderPath` for the flat
-variant. Open a new tab after changing the path so Windows Terminal loads the
-selected shader.
+dark variant or `fallout-terminal-flat-light.hlsl` for the flat light variant.
+Open a new tab after changing the path so Windows Terminal loads the selected
+shader.
 
 The included installer adds both palettes, creates a timestamped settings
 backup, and selects the requested combination:

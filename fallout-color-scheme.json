@@ -25,10 +25,10 @@
     },
     {
       "name": "Fallout Terminal Light",
-      "background": "#F2F0DE",
+      "background": "#EEF2EC",
       "foreground": "#182318",
       "cursorColor": "#285F2B",
-      "selectionBackground": "#B8C9A8",
+      "selectionBackground": "#C1D0BE",
       "black": "#0B100C",
       "red": "#9D241F",
       "green": "#176426",
