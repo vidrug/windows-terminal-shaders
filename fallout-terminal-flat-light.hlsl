@@ -332,9 +332,7 @@ float3 preserveLightThemeContrast(float2 uv, float3 color, float lightTheme)
     // status bar. Rescue only those local low-contrast glyphs; normal dark text
     // on the light terminal background is intentionally left untouched.
     float2 pixel = 1.0 / max(Resolution, float2(1.0, 1.0));
-    // Sample beyond the glyph strokes so a filled cell background is detected
-    // consistently at different font sizes and DPI scales.
-    float2 offset = pixel * float2(10.0, 7.0);
+    float2 offset = pixel * 5.5;
     float4 sampleRight = shaderTexture.Sample(samplerState, clamp(
         uv + float2(offset.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
     float4 sampleLeft = shaderTexture.Sample(samplerState, clamp(
