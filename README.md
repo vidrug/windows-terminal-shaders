@@ -197,9 +197,7 @@ background. ANSI black remains distinct from the background in both schemes.
 Keep `FALLOUT_COLOR_MODE` set to `0` to display these colors without
 monochrome phosphor grading. Both palettes work with both shader variants. The
 dedicated light variants use restrained ink-style optics instead of additive
-phosphor bloom, keeping dark glyphs crisp. A local contrast pass also rescues
-dark application text placed on dark ANSI status bars, such as tmux themes,
-without changing normal text on the light terminal background.
+phosphor bloom, keeping dark glyphs crisp and palette colors intact.
 
 ![Fallout Terminal ANSI color palette](.github/fallout-terminal-palette.png)
 
@@ -210,7 +208,7 @@ without changing normal text on the light terminal background.
 - [`fallout-terminal-flat.hlsl`](./fallout-terminal-flat.hlsl) keeps the image
   rectangular, removes the inset and vignette, and fills the terminal viewport.
 - [`fallout-terminal-light.hlsl`](./fallout-terminal-light.hlsl) is the curved
-  light-palette variant with restrained effects and contextual contrast.
+  light-palette variant with restrained effects.
 - [`fallout-terminal-flat-light.hlsl`](./fallout-terminal-flat-light.hlsl) is
   the rectangular light-palette variant.
 

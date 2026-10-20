@@ -326,60 +326,6 @@ float3 applyGlassGlare(float3 color, float2 glassUv, float contentAlpha)
     return color;
 }
 
-float3 preserveLightThemeContrast(float2 uv, float3 color, float lightTheme)
-{
-    // Applications such as tmux may place dark ANSI text on a dark colored
-    // status bar. Rescue only those local low-contrast glyphs; normal dark text
-    // on the light terminal background is intentionally left untouched.
-    float2 pixel = 1.0 / max(Resolution, float2(1.0, 1.0));
-    float2 offset = pixel * 5.5;
-    float4 sampleRight = shaderTexture.Sample(samplerState, clamp(
-        uv + float2(offset.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleLeft = shaderTexture.Sample(samplerState, clamp(
-        uv - float2(offset.x, 0.0), float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleDown = shaderTexture.Sample(samplerState, clamp(
-        uv + float2(0.0, offset.y), float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleUp = shaderTexture.Sample(samplerState, clamp(
-        uv - float2(0.0, offset.y), float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleDownRight = shaderTexture.Sample(samplerState, clamp(
-        uv + offset, float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleUpLeft = shaderTexture.Sample(samplerState, clamp(
-        uv - offset, float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleDownLeft = shaderTexture.Sample(samplerState, clamp(
-        uv + float2(-offset.x, offset.y), float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 sampleUpRight = shaderTexture.Sample(samplerState, clamp(
-        uv + float2(offset.x, -offset.y), float2(0.0, 0.0), float2(1.0, 1.0)));
-    float4 surroundings = (sampleRight + sampleLeft + sampleDown + sampleUp +
-        sampleDownRight + sampleUpLeft + sampleDownLeft + sampleUpRight) * 0.125;
-
-    float backdropLuminance = luminance(surroundings.rgb);
-    float glyphLuminance = luminance(color);
-    float colorSeparation = smoothstep(0.07, 0.22,
-        length(color - surroundings.rgb));
-    float lowLuminanceContrast = 1.0 - smoothstep(0.08, 0.42,
-        abs(glyphLuminance - backdropLuminance));
-    float darkColoredBackdrop = 1.0 - smoothstep(0.30, 0.55,
-        backdropLuminance);
-    // Empty terminal cells carry near-black RGB and receive the profile
-    // background after this shader. A real application-owned colored bar has
-    // visible source RGB even when Windows Terminal reports little alpha.
-    float backdropSupport = (step(0.025, luminance(sampleRight.rgb)) +
-        step(0.025, luminance(sampleLeft.rgb)) +
-        step(0.025, luminance(sampleDown.rgb)) +
-        step(0.025, luminance(sampleUp.rgb)) +
-        step(0.025, luminance(sampleDownRight.rgb)) +
-        step(0.025, luminance(sampleUpLeft.rgb)) +
-        step(0.025, luminance(sampleDownLeft.rgb)) +
-        step(0.025, luminance(sampleUpRight.rgb))) * 0.125;
-    float continuousBackdrop = smoothstep(0.86, 0.99, backdropSupport);
-    float visibleBackdrop = smoothstep(0.025, 0.10, backdropLuminance) *
-        continuousBackdrop;
-    float rescue = lightTheme * colorSeparation * lowLuminanceContrast *
-        darkColoredBackdrop * visibleBackdrop;
-
-    return lerp(color, float3(0.92, 0.98, 0.94), saturate(rescue));
-}
-
 float3 sampleGlow(float2 uv, float3 center)
 {
 #if ENABLE_GLOW
@@ -521,8 +467,6 @@ float4 main(PSInput input) : SV_TARGET
     float vignette = screenVignette(glassUv);
     color *= lerp(vignette, lerp(1.0, vignette, 0.25), lightTheme);
 #endif
-
-    color = preserveLightThemeContrast(uv, color, lightTheme);
 
     return float4(saturate(color), source.a);
 }
