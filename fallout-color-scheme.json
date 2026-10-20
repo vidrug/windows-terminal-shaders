@@ -22,6 +22,29 @@
       "brightPurple": "#DF55B9",
       "brightCyan": "#2CF4B3",
       "brightWhite": "#FFFFFF"
+    },
+    {
+      "name": "Fallout Terminal Light",
+      "background": "#F2F0DE",
+      "foreground": "#182318",
+      "cursorColor": "#285F2B",
+      "selectionBackground": "#B8C9A8",
+      "black": "#0B100C",
+      "red": "#9D241F",
+      "green": "#176426",
+      "yellow": "#715600",
+      "blue": "#185B7A",
+      "purple": "#712B60",
+      "cyan": "#00645B",
+      "white": "#596357",
+      "brightBlack": "#566052",
+      "brightRed": "#B82B24",
+      "brightGreen": "#1D7730",
+      "brightYellow": "#856500",
+      "brightBlue": "#1B6D91",
+      "brightPurple": "#873573",
+      "brightCyan": "#00776C",
+      "brightWhite": "#263226"
     }
   ]
 }

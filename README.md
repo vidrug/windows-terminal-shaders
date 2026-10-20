@@ -136,9 +136,10 @@ When using a monochorme tint, there should be some considerations made. The Vint
 
 ## [Fallout Terminal](./fallout-terminal.hlsl)
 
-A Fallout / Pip-Boy inspired CRT treatment with saturated ANSI colors, phosphor
-glow, scanlines, glass optics, analog drift, and an optional monochrome-green
-color mode. The implementation is original and does not use game assets.
+A Fallout / Pip-Boy inspired CRT treatment with dark and light ANSI palettes,
+phosphor glow, scanlines, glass optics, analog drift, and an optional
+monochrome-green color mode. The implementation is original and does not use
+game assets.
 
 ### Preview
 
@@ -148,11 +149,12 @@ color mode. The implementation is original and does not use game assets.
 
 ### Color palette
 
-[`fallout-color-scheme.json`](./fallout-color-scheme.json) contains the matching
-`Fallout Terminal Color` scheme. It uses a dark green-gray screen background,
-warm neutral foreground text, and bright saturated ANSI colors. The ANSI black
-color is intentionally darker than the background, so black text and blocks
-remain distinguishable instead of disappearing into the screen.
+[`fallout-color-scheme.json`](./fallout-color-scheme.json) contains two matching
+schemes. `Fallout Terminal Color` uses a dark green-gray screen background,
+warm neutral foreground text, and bright saturated ANSI colors. `Fallout
+Terminal Light` uses a warm paper-phosphor background with dark ANSI colors;
+every foreground color has at least a 4.7:1 contrast ratio against the
+background. ANSI black remains distinct from the background in both schemes.
 
 | UI color | Value |
 | -------- | ----- |
@@ -172,8 +174,31 @@ remain distinguishable instead of disappearing into the screen.
 | Cyan | `#18C48E` | `#2CF4B3` |
 | White | `#D9DDCF` | `#FFFFFF` |
 
+#### Light palette
+
+| UI color | Value |
+| -------- | ----- |
+| Background | `#F2F0DE` |
+| Foreground | `#182318` |
+| Cursor | `#285F2B` |
+| Selection | `#B8C9A8` |
+
+| ANSI color | Normal | Bright |
+| ---------- | ------ | ------ |
+| Black | `#0B100C` | `#566052` |
+| Red | `#9D241F` | `#B82B24` |
+| Green | `#176426` | `#1D7730` |
+| Yellow | `#715600` | `#856500` |
+| Blue | `#185B7A` | `#1B6D91` |
+| Purple | `#712B60` | `#873573` |
+| Cyan | `#00645B` | `#00776C` |
+| White | `#596357` | `#263226` |
+
 Keep `FALLOUT_COLOR_MODE` set to `0` to display these colors without
-monochrome phosphor grading. The palette works with both shader variants.
+monochrome phosphor grading. Both palettes work with both shader variants. The
+shader reads Windows Terminal's active background color and automatically uses
+additive phosphor bloom for the dark scheme or restrained ink-style optics for
+the light scheme, keeping dark glyphs crisp.
 
 ![Fallout Terminal ANSI color palette](.github/fallout-terminal-palette.png)
 
@@ -198,9 +223,29 @@ Windows Terminal's `settings.json`, then set the scheme and shader on a profile:
 }
 ```
 
+For the light version, use the same shader and change only the scheme:
+
+```json
+{
+  "colorScheme": "Fallout Terminal Light",
+  "experimental.pixelShaderPath": "C:\\path\\to\\fallout-terminal.hlsl"
+}
+```
+
 Use `fallout-terminal-flat.hlsl` in `experimental.pixelShaderPath` for the flat
 variant. Open a new tab after changing the path so Windows Terminal loads the
 selected shader.
+
+The included installer adds both palettes, creates a timestamped settings
+backup, and selects the requested combination:
+
+```powershell
+.\install-fallout-terminal.ps1 -ShaderVariant Flat -Theme Light
+```
+
+Use `-Theme Dark` to switch back without changing the selected shader variant.
+Preview either palette directly with `./show-fallout-palette.ps1 -Theme Light`
+or `-Theme Dark`.
 
 ### Color mode
 

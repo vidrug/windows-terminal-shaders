@@ -211,7 +211,7 @@ float edgeOpticsAmount(float2 glassUv)
     return smoothstep(0.30, 1.15, length(centered));
 }
 
-float4 sampleOpticalSource(float2 uv, float2 glassUv)
+float4 sampleOpticalSource(float2 uv, float2 glassUv, float lightTheme)
 {
     float2 pixel = 1.0 / max(Resolution, float2(1.0, 1.0));
     float edgeAmount = edgeOpticsAmount(glassUv);
@@ -246,8 +246,10 @@ float4 sampleOpticalSource(float2 uv, float2 glassUv)
     float4 bleedRight = shaderTexture.Sample(samplerState,
         clamp(uv + bleedOffset, float2(0.0, 0.0), float2(1.0, 1.0)));
     float4 horizontalBleed = (bleedLeft + bleedRight) * 0.5;
-    result.rgb = lerp(result.rgb, max(result.rgb, horizontalBleed.rgb),
-        COLOR_BLEED_STRENGTH);
+    // Bright phosphor blooms on dark screens; dark ink spreads on light ones.
+    float3 bleedTarget = lerp(max(result.rgb, horizontalBleed.rgb),
+        min(result.rgb, horizontalBleed.rgb), lightTheme);
+    result.rgb = lerp(result.rgb, bleedTarget, COLOR_BLEED_STRENGTH);
     result.a = max(result.a, horizontalBleed.a * COLOR_BLEED_STRENGTH);
 #endif
 
@@ -361,6 +363,9 @@ float4 main(PSInput input) : SV_TARGET
 {
     float2 glassUv = input.uv;
     float2 uv = glassUv;
+    // Windows Terminal exposes the active profile background in the cbuffer.
+    // Switch optics automatically so light palettes retain dark, crisp text.
+    float lightTheme = step(0.55, luminance(Background.rgb));
 
 #if ENABLE_CURVATURE
     uv = curveScreen(uv);
@@ -385,9 +390,11 @@ float4 main(PSInput input) : SV_TARGET
     uv = addVerticalSyncSlip(uv);
     uv = clamp(uv, float2(0.0, 0.0), float2(1.0, 1.0));
 
-    float4 source = sampleOpticalSource(uv, glassUv);
+    float4 source = sampleOpticalSource(uv, glassUv, lightTheme);
     float3 glowSource = sampleGlow(uv, source.rgb);
     float4 halation = sampleHalation(uv, source);
+    glowSource *= 1.0 - lightTheme;
+    halation *= 1.0 - lightTheme;
     glowSource += halation.rgb;
     source.a = max(source.a, halation.a);
     float sourceEnergy = max(luminance(source.rgb), max(source.r, source.b) * 0.62);
@@ -411,43 +418,54 @@ float4 main(PSInput input) : SV_TARGET
     color = source.rgb + glowSource;
 #endif
 
+    // Additive phosphor bloom is appropriate for a dark CRT, but it washes out
+    // dark glyphs on a light screen. Preserve the sampled ink colors instead.
+    color = lerp(color, source.rgb, lightTheme);
+
 #if FALLOUT_COLOR_MODE
     float colorLuminance = luminance(color);
     color = lerp(float3(colorLuminance, colorLuminance, colorLuminance),
         color, COLOR_SATURATION);
 #endif
 
-    color *= BRIGHTNESS;
+    color *= lerp(BRIGHTNESS, 1.0, lightTheme);
 
     // A dim powered-on phosphor floor makes scanlines visible in black areas.
 #if FALLOUT_COLOR_MODE
-    color += BLACK_LEVEL * PHOSPHOR_COLOR;
+    color += BLACK_LEVEL * PHOSPHOR_COLOR * (1.0 - lightTheme);
 #else
-    color += BLACK_LEVEL * float3(0.65, 0.65, 0.65);
+    color += BLACK_LEVEL * float3(0.65, 0.65, 0.65) * (1.0 - lightTheme);
 #endif
 
-    color *= scanlineMask(input.pos.xy);
-    color = applyPhosphorMask(color, input.pos.xy);
-    color *= rollingRefresh(glassUv);
+    float scanlines = scanlineMask(input.pos.xy);
+    color *= lerp(scanlines, lerp(1.0, scanlines, 0.22), lightTheme);
+    float3 phosphorMasked = applyPhosphorMask(color, input.pos.xy);
+    color = lerp(phosphorMasked, lerp(color, phosphorMasked, 0.18), lightTheme);
+    float refresh = rollingRefresh(glassUv);
+    color *= lerp(refresh, lerp(1.0, refresh, 0.20), lightTheme);
 
     // Irregular power flicker, restrained so text remains comfortable to read.
     float flicker = 0.988 + 0.012 * sin(Time * 41.0);
     flicker += (hash12(float2(floor(Time * 24.0), 7.0)) - 0.5) * 0.012;
-    color *= flicker;
+    color *= lerp(flicker, lerp(1.0, flicker, 0.20), lightTheme);
 
 #if ENABLE_NOISE
     float noise = hash12(floor(glassUv * Resolution) + floor(Time * 30.0));
 #if FALLOUT_COLOR_MODE
-    color += PHOSPHOR_COLOR * (noise - 0.5) * NOISE_STRENGTH;
+    color += PHOSPHOR_COLOR * (noise - 0.5) * NOISE_STRENGTH *
+        lerp(1.0, 0.30, lightTheme);
 #else
-    color += (noise - 0.5) * NOISE_STRENGTH;
+    color += (noise - 0.5) * NOISE_STRENGTH * lerp(1.0, 0.30, lightTheme);
 #endif
 #endif
 
+    float3 colorBeforeGlare = color;
     color = applyGlassGlare(color, glassUv, source.a);
+    color = lerp(color, colorBeforeGlare, lightTheme);
 
 #if ENABLE_VIGNETTE
-    color *= screenVignette(glassUv);
+    float vignette = screenVignette(glassUv);
+    color *= lerp(vignette, lerp(1.0, vignette, 0.25), lightTheme);
 #endif
 
     return float4(saturate(color), source.a);
